@@ -1,57 +1,38 @@
 grammar CLikeLang;
 
 
+//base Lua.g4
+
+start : stat EOF;
+
 stat
-    : NAME '=' exp
-    | 'while' exp 'do' '{' block '}'
-    | 'if' exp 'then' '{' block '}' ( 'else' '{' block '}' )?
+    : NAME '=' exp                                                      #assign
+    | 'while' '(' cond=exp ')' '{' block=stat* '}'                      #while
+    | 'if' '(' cond=exp ')'
+        'then' '{' ifBlock=stat* '}'
+        ( 'else' '{' elseBlock=stat* '}' )?                             #if
+    | exp                                                               #expression
     ;
 
 exp
-    : 'nil' | 'false' | 'true'
-    | NAME
-    | number
-    | <assoc=right> exp operatorPower exp
-    | operatorUnary exp
-    | exp operatorMulDiv exp
-    | exp operatorAddSub exp
-    | exp operatorComparison exp
-    | exp operatorAnd exp
-    | exp operatorOr exp
-    | '(' exp ')'
+    : arithExp
+    | boolExp
     ;
 
-block
-    : stat* retstat?
+arithExp
+    : <assoc=right> l=arithExp op='^' r=arithExp                         #power
+    | op='-' arithExp                                                    #unaryInt
+    | <assoc=left> l=arithExp op=('*' | '/') r=arithExp                  #mulDiv
+    | <assoc=left> l=arithExp op=('+' | '-') r=arithExp                  #addSub
+    | '('arithExp')'                                                     #bracketsArith
+    | INT                                                                #myInt
+    | NAME                                                               #myString
     ;
 
-retstat
-    : 'return' exp?
-    ;
-
-operatorOr
-	: '||';
-
-operatorAnd
-	: '&&';
-
-operatorComparison
-	: '<' | '>' | '<=' | '>=' | '/=' | '==';
-
-operatorAddSub
-	: '+' | '-';
-
-operatorMulDiv
-	: '*' | '/';
-
-operatorUnary
-    : '-';
-
-operatorPower
-    : '^';
-
-number
-    : INT
+boolExp
+    : l=arithExp op=('<' | '>' | '<=' | '>=' | '!=' | '==') r=arithExp   #compare
+    | op='!' boolExp                                                     #unaryBool
+    | <assoc=right> l=boolExp op=('&&' | '||') r=boolExp                 #andOr
     ;
 
 NAME
@@ -59,11 +40,7 @@ NAME
     ;
 
 INT
-    : Digit+
+    : [0-9]+
     ;
 
-Digit
-    : [0-9]
-    ;
-
-WS: [ \t\n] -> skip;
+WS : (' ' | '\t')+ -> channel(HIDDEN);
